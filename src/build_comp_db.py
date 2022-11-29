@@ -2,23 +2,45 @@ import pandas
 import requests
 from bs4 import BeautifulSoup
 
-#compdb = pandas.read_excel('.\compdb.xlsx','name1')
-url = 'https://zh.wikipedia.org/api/rest_v1/page/html/YUSEI'
+compdb = pandas.read_excel('./compDB.xlsx','1-99')
+df = pandas.DataFrame({'code':[],
+                        'description':[]})
 
-re = requests.get(url)
+for c, n in zip(compdb['name2'].tolist(), compdb['number'].tolist()):
+   url = f'https://zh.wikipedia.org/api/rest_v1/page/html/{c}'
 
-soup = BeautifulSoup(re.text, features="html.parser")
+   re = requests.get(url)
 
-# kill all script and style elements
-for script in soup(["script", "style"]):
-    script.extract()    # rip it out
+   if re.status_code != 404:
+      soup = BeautifulSoup(re.text, features="html.parser")
 
-# get text
-text = soup.get_text()
+      # kill all script and style elements
+      for script in soup(["script", "style"]):
+         script.extract()    # rip it out
 
-lines = (line.strip() for line in text.splitlines())
+      # get text
+      text = soup.get_text()
 
-# remove empty lines
-lines1 = (l for l in lines if l)
+      lines = (line.strip() for line in text.splitlines())
 
-print(lines1)
+      # remove empty lines
+      lines1 = (l for l in lines if l)
+
+      while True:
+         try:
+            l = next(lines1)
+            a = len(l)
+            while a < 250:
+               l += next(lines1)
+               a = len(l) 
+         except StopIteration:
+            break
+         #print('3', l, len(l))
+         df = pandas.concat([df, pandas.DataFrame({'code': n, 'description': l}, index=[1])], ignore_index=True)
+      #print('3', l, len(l))
+      df = pandas.concat([df, pandas.DataFrame({'code': n, 'description': l}, index=[1])], ignore_index=True)
+      re.close()
+   else:
+      #print(c, n)
+      print(df)
+df.to_excel('./a.xlsx')
